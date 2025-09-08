@@ -1,0 +1,93 @@
+<div class="container">
+  <h1>{{ title }}</h1>
+  
+  <!-- Health Check Section -->
+  <div class="card">
+    <h2>
+      <span class="status-indicator" [class.status-online]="healthStatus === 'online'" 
+            [class.status-offline]="healthStatus === 'offline'"></span>
+      Backend Status
+    </h2>
+    <p>Current status: <strong>{{ healthStatus | titlecase }}</strong></p>
+    <button (click)="checkHealth()" [disabled]="isHealthCheckLoading">
+      <span *ngIf="isHealthCheckLoading" class="loading"></span>
+      {{ isHealthCheckLoading ? 'Checking...' : 'Check Health' }}
+    </button>
+  </div>
+  
+  <!-- Payment Form Section -->
+  <div class="card">
+    <h2>Payment Form</h2>
+    <form (ngSubmit)="onCharge()">
+      <div class="form-group">
+        <label for="amount">Amount:</label>
+        <input 
+          type="number" 
+          id="amount" 
+          [(ngModel)]="chargeRequest.amount" 
+          name="amount"
+          min="1"
+          required>
+      </div>
+      
+      <div class="form-group">
+        <label for="currency">Currency:</label>
+        <select 
+          id="currency" 
+          [(ngModel)]="chargeRequest.currency" 
+          name="currency"
+          required>
+          <option *ngFor="let currency of currencies" [value]="currency">
+            {{ currency }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="customerId">Customer ID:</label>
+        <input 
+          type="text" 
+          id="customerId" 
+          [(ngModel)]="chargeRequest.customerId" 
+          name="customerId"
+          required>
+      </div>
+      
+      <button type="submit" [disabled]="isLoading">
+        <span *ngIf="isLoading" class="loading"></span>
+        {{ isLoading ? 'Processing...' : 'Process Payment' }}
+      </button>
+    </form>
+  </div>
+  
+  <!-- Quick Actions Section -->
+  <div class="card">
+    <h2>Quick Actions</h2>
+    <p>Test different payment scenarios:</p>
+    
+    <button class="btn-success" (click)="onQuickCharge(50, 'USD')" [disabled]="isLoading">
+      $50 USD Payment
+    </button>
+    
+    <button class="btn-success" (click)="onQuickCharge(100, 'EUR')" [disabled]="isLoading">
+      €100 EUR Payment
+    </button>
+    
+    <button class="btn-success" (click)="onQuickCharge(5000, 'INR')" [disabled]="isLoading">
+      ₹5000 INR Payment
+    </button>
+    
+    <button class="btn-warning" (click)="onQuickCharge(100, 'INVALID')" [disabled]="isLoading">
+      Test Invalid Currency
+    </button>
+  </div>
+  
+  <!-- Response Section -->
+  <div class="card" *ngIf="response">
+    <h2>Response</h2>
+    <div class="response" [class.success]="responseType === 'success'" 
+         [class.error]="responseType === 'error'">
+      {{ response }}
+    </div>
+  </div>
+</div>
