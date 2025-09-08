@@ -1,87 +1,78 @@
-# Payments Monorepo
+# Payments Application - AWS ECS Fargate Deployment
 
-A full-stack payments application with Angular frontend and Spring Boot backend.
+A demo payments app deployed on AWS ECS Fargate with Terraform infrastructure as code.
 
-## Architecture
+## 🏗️ Architecture
 
-- **Frontend**: Angular 17 with standalone components
-- **Backend**: Spring Boot 3.3.2 with Java 17
-- **Containerization**: Docker with multi-stage builds
-- **Development**: Docker Compose for local development
+- **Frontend**: Angular 17 application served via Nginx
+- **Backend**: Spring Boot with Java 21
+- **Infrastructure**: AWS ECS Fargate, ALB, VPC, ECR
+- **Orchestration**: Terraform with environment-based modules
+- **CI/CD**: GitHub Actions with environment-specific workflows
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 sample-app/
-├── backend/                 # Spring Boot backend
-│   ├── src/main/java/      # Java source code
-│   ├── src/main/resources/ # Configuration files
-│   ├── pom.xml            # Maven dependencies
-│   └── Dockerfile         # Backend container
-├── frontend/               # Angular frontend
-│   ├── src/app/           # Angular components
-│   ├── package.json       # Node dependencies
-│   ├── Dockerfile         # Frontend container
-│   └── nginx.conf         # Nginx configuration
-├── docker-compose.yml     # Local development setup
-├── build.sh              # Build script
-├── run-local.sh          # Local development script
-└── README.md             # This file
+├── backend/                    # Spring Boot backend
+│   ├── src/                   # Java source code
+│   ├── Dockerfile             # Local development
+│   ├── Dockerfile.prod        # Production optimized
+│   └── pom.xml               # Maven dependencies
+├── frontend/                   # Angular frontend
+│   ├── src/                   # Angular source code
+│   ├── Dockerfile             # Local development
+│   ├── Dockerfile.prod        # Production optimized
+│   └── package.json           # Node dependencies
+├── terraform/                  # Infrastructure as Code
+│   ├── modules/               # Reusable Terraform modules
+│   │   ├── vpc/              # VPC and networking
+│   │   ├── security-groups/  # Security groups
+│   │   ├── ecr/              # ECR repositories
+│   │   ├── alb/              # Application Load Balancer
+│   │   └── ecs/              # ECS cluster and services
+│   └── environments/          # Environment-specific configs
+│       ├── dev/              # Development environment
+│       └── prod/             # Production environment
+├── .github/workflows/         # CI/CD pipelines
+│   ├── deploy-dev.yml        # Deploy to dev on develop branch
+│   └── deploy-prod.yml       # Deploy to prod on main branch
+├── deploy.sh                  # Deployment script
+├── setup-terraform-state-simple.sh  # Terraform state setup
 ```
 
-## API Endpoints
+## 🌍 Environment Strategy
 
-### Backend API (Port 8080)
+### Branching Strategy
+- `main` → Production environment
+- `develop` → Development environment  
 
-- `GET /api/healthz` - Health check endpoint
-- `POST /api/charge` - Process payment
+### Environment Isolation
+- **Separate VPCs**: Each environment has its own VPC with unique CIDR blocks
+- **Separate ECR Repositories**: Environment-specific container registries
+- **Separate ECS Clusters**: Isolated compute resources
+- **Separate Terraform State**: Independent state management per environment
 
-#### Charge Request
-```json
-{
-  "amount": 100,
-  "currency": "USD",
-  "customerId": "customer-123"
-}
-```
+### Environment Configurations
 
-#### Charge Response
-```json
-{
-  "status": "succeeded",
-  "transactionId": "uuid-here",
-  "amount": 100,
-  "currency": "USD",
-  "customerId": "customer-123"
-}
-```
+| Environment | VPC CIDR     | CPU/Memory | Desired Count | Log Retention |
+|-------------|--------------|------------|---------------|---------------|
+| Dev         | 10.0.0.0/16  | 256/512    | 1/1           | 7 days        |
+| Prod        | 10.1.0.0/16  | 512/1024   | 2/2           | 30 days       |
 
-## Quick Start
-
-1. **Access the application:**
-   - Frontend: http://localhost:4200
-   - Backend: http://localhost:8080
-   - Health Check: http://localhost:8080/api/healthz
+## 🚀 Quick Start
 
 ### Prerequisites
-- AWS CLI configured with appropriate permissions
+- AWS CLI
 - Terraform >= 1.0
 - Docker
 - Git
 
 ### 1. Setup Terraform State Backends
 
-**Option A: Automated Setup (if AWS credentials are configured)**
 ```bash
 # Set up S3 buckets and DynamoDB tables for Terraform state
 ./setup-terraform-state-simple.sh -c YOUR_AWS_ACCOUNT_ID
-```
-
-**Option B: Manual Setup**
-If you encounter issues with the automated setup, follow the detailed instructions in `MANUAL_SETUP.md`:
-```bash
-# Follow the step-by-step instructions in MANUAL_SETUP.md
-cat MANUAL_SETUP.md
 ```
 
 ### 2. Deploy to Development
@@ -98,83 +89,141 @@ cat MANUAL_SETUP.md
 ./deploy.sh -e prod -a deploy -c YOUR_AWS_ACCOUNT_ID
 ```
 
-## 🔧 AWS Credentials Setup
+## 🛠️ Deployment Commands
 
-Before running the deployment scripts, ensure your AWS credentials are configured:
-
-**Option 1: AWS CLI Configuration**
-```bash
-aws configure
-# Enter your Access Key ID, Secret Access Key, and region
-```
-
-**Option 2: Environment Variables**
-```bash
-export AWS_ACCESS_KEY_ID=your_access_key_id
-export AWS_SECRET_ACCESS_KEY=your_secret_access_key
-export AWS_DEFAULT_REGION=us-west-2
-```
-
-**Option 3: IAM Roles (if running on EC2)**
-- Attach an IAM role to your EC2 instance with the required permissions
-
-## 📋 Required AWS Permissions
-
-Your AWS user/role needs the following permissions:
-- **S3**: CreateBucket, DeleteBucket, ListBucket, GetObject, PutObject, DeleteObject
-- **DynamoDB**: CreateTable, DeleteTable, DescribeTable, GetItem, PutItem, DeleteItem
-- **IAM**: CreatePolicy, AttachUserPolicy, AttachRolePolicy
-- **ECS**: Full access to ECS, ECR, VPC, ALB, CloudWatch
-- **EC2**: Full access to VPC, Security Groups, Subnets, Route Tables
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-1. **S3 Bucket Name Already Exists**
-   - S3 bucket names must be globally unique
-   - The setup script uses your AWS Account ID to ensure uniqueness
-   - If you still get conflicts, modify the bucket names in the scripts
-
-2. **AWS Credentials Not Configured**
-   - Run `aws configure` to set up credentials
-   - Or set environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
-   - Or use IAM roles if running on EC2
-
-3. **Terraform State Lock**
-   ```bash
-   # Force unlock if needed (use with caution)
-   terraform force-unlock <lock-id>
-   ```
-
-4. **ECS Service Not Starting**
-   ```bash
-   # Check service events
-   aws ecs describe-services --cluster <cluster-name> --services <service-name>
-   ```
-
-### Useful Commands
+### Using the Deployment Script
 
 ```bash
-# Get ECS cluster status
-aws ecs describe-clusters --clusters payments-<env>-cluster
+# Deploy to any environment
+./deploy.sh -e <environment> -a deploy -c <account-id>
 
-# Get service status
-aws ecs describe-services --cluster payments-<env>-cluster --services payments-<env>-backend-service
+# Plan changes without applying
+./deploy.sh -e <environment> -a plan -c <account-id>
 
-# Get ALB DNS name
-aws elbv2 describe-load-balancers --names payments-<env>-alb --query 'LoadBalancers[0].DNSName'
+# Check deployment status
+./deploy.sh -e <environment> -a status -c <account-id>
 
-# View CloudWatch logs
-aws logs describe-log-groups --log-group-name-prefix "/ecs/payments-<env>"
+# Destroy environment (use with caution!)
+./deploy.sh -e <environment> -a destroy -c <account-id>
 ```
 
-## 📞 Support
+### Manual Terraform Commands
 
-For issues or questions:
-1. Check the troubleshooting section above
-2. Review CloudWatch logs
-3. Check GitHub Actions workflow logs
-4. Consult AWS documentation
-5. See `MANUAL_SETUP.md` for detailed setup instructions
+```bash
+# Navigate to environment directory
+cd terraform/environments/<environment>
 
+# Initialize Terraform
+terraform init
+
+# Plan changes
+terraform plan
+
+# Apply changes
+terraform apply
+
+# Destroy infrastructure
+terraform destroy
+```
+
+## 🔄 CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+The project includes automated CI/CD pipelines that trigger on branch pushes:
+
+- **Push to `develop`** → Deploy to Dev environment
+- **Push to `main`** → Deploy to Production environment
+
+
+### Pipeline Steps
+
+1. **Build**: Build Docker images for backend and frontend
+2. **Push**: Push images to environment-specific ECR repositories
+3. **Deploy**: Run Terraform to update infrastructure
+4. **Update Services**: Force new deployment of ECS services
+
+## 🏗️ Infrastructure Components
+
+### VPC Module
+- VPC with public and private subnets
+- Internet Gateway and NAT Gateways
+- Route tables and associations
+- Multi-AZ deployment
+
+### Security Groups Module
+- ALB security group (ports 80, 443)
+- ECS security group (ports 80, 8080)
+- Proper ingress/egress rules
+
+### ECR Module
+- Separate repositories for backend and frontend
+- Lifecycle policies for image cleanup
+- Image scanning enabled
+
+### ALB Module
+- Application Load Balancer
+- Target groups for frontend and backend
+- Path-based routing (`/api/*` → backend, `/` → frontend)
+- Health checks configured at `/api/healthz` → backend
+
+### ECS Module
+- Fargate cluster
+- Task definitions for backend and frontend
+- ECS services with load balancer integration
+- CloudWatch logging
+- IAM roles and policies
+
+## 📊 Monitoring and Logging
+
+### CloudWatch Logs
+- Centralized logging for all containers
+- Environment-specific log groups
+- Configurable retention periods
+
+### Health Checks
+- Application Load Balancer health checks
+- ECS service health monitoring
+- Container health checks
+
+## 🔒 Security Features
+
+### Network Security
+- Private subnets for ECS tasks
+- Public subnets only for ALB
+- Security groups with minimal required access
+
+### Container Security
+- ECR image scanning
+- Non-root containers
+- Minimal base images
+
+### Access Control
+- IAM roles with least privilege
+- Separate execution and task roles
+- Environment-specific permissions
+
+## 📈 Scaling and Performance
+
+### Auto Scaling
+- ECS services can be configured with auto scaling
+- Target tracking based on CPU/memory utilization
+- Scheduled scaling for predictable workloads
+
+### Performance Optimization
+- Multi-AZ deployment for high availability
+- Fargate for cost optimization
+- Container insights for performance monitoring
+
+## 💰 Cost Optimization
+
+### Development Environments
+- Single container deployment
+- Smaller container sizes
+- Shorter log retention depending on environment
+
+### Production Environment
+- Multi-instance deployment
+- Larger instance sizes
+- Longer log retention
+- Reserved capacity options
